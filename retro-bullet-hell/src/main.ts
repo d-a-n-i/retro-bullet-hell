@@ -53,15 +53,8 @@ function showBootError(error: unknown): void {
 }
 
 function boot(): void {
-  const canvas = document.querySelector<HTMLCanvasElement>('#game')
-  if (!canvas) {
-    throw new Error('Canvas element #game not found')
-  }
-
-  const ctx = canvas.getContext('2d', { alpha: false })
-  if (!ctx) {
-    throw new Error('Failed to acquire 2D rendering context')
-  }
+  const canvas = document.querySelector('#game') as HTMLCanvasElement
+  const ctx = canvas.getContext('2d', { alpha: false }) as CanvasRenderingContext2D
 
   const fpsEl = document.querySelector<HTMLDivElement>('#fps')
   const scoreEl = document.querySelector<HTMLDivElement>('#score')
