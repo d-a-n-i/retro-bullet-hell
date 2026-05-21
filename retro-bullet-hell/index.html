@@ -3,7 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="theme-color" content="#0a0a0f" />
     <title>retro-bullet-hell</title>
     <style>
       html,
@@ -40,6 +47,66 @@
           <div id="score">Score 0</div>
         </div>
         <div id="fps">-- FPS</div>
+      </div>
+      <div id="controls-hint" class="controls-hint" data-platform="desktop">
+        <div class="controls-hint__panel">
+          <h1 class="controls-hint__title">RETRO BULLET HELL</h1>
+          <div class="controls-hint__rows controls-hint__rows--desktop">
+            <div class="controls-hint__row">
+              <div class="controls-hint__keys">
+                <span class="key">W</span>
+                <div class="key-cluster">
+                  <span class="key">A</span>
+                  <span class="key">S</span>
+                  <span class="key">D</span>
+                </div>
+              </div>
+              <span class="controls-hint__label">or</span>
+              <div class="controls-hint__keys">
+                <span class="key key--arrow">&#8593;</span>
+                <div class="key-cluster">
+                  <span class="key key--arrow">&#8592;</span>
+                  <span class="key key--arrow">&#8595;</span>
+                  <span class="key key--arrow">&#8594;</span>
+                </div>
+              </div>
+              <span class="controls-hint__caption">move</span>
+            </div>
+            <div class="controls-hint__row">
+              <div class="controls-hint__mouse">
+                <div class="mouse">
+                  <div class="mouse__button mouse__button--left"></div>
+                  <div class="mouse__button mouse__button--right"></div>
+                </div>
+              </div>
+              <span class="controls-hint__caption">
+                <strong>move mouse</strong> to aim<br />
+                <strong>hold left click</strong> to shoot
+              </span>
+            </div>
+          </div>
+          <div class="controls-hint__rows controls-hint__rows--mobile">
+            <div class="controls-hint__row">
+              <div class="touch-icon touch-icon--stick">
+                <div class="touch-icon__base"></div>
+                <div class="touch-icon__thumb"></div>
+              </div>
+              <span class="controls-hint__caption">
+                <strong>drag bottom-left</strong><br />to move
+              </span>
+            </div>
+            <div class="controls-hint__row">
+              <div class="touch-icon touch-icon--tap">
+                <div class="touch-icon__ripple"></div>
+                <div class="touch-icon__dot"></div>
+              </div>
+              <span class="controls-hint__caption">
+                <strong>tap &amp; hold elsewhere</strong><br />to aim &amp; shoot
+              </span>
+            </div>
+          </div>
+          <div class="controls-hint__start">tap or press any key to begin</div>
+        </div>
       </div>
     </div>
     <script type="module" src="/src/main.ts"></script>

@@ -46,6 +46,8 @@ export class Player {
   /** Smoothed angle for ship rendering. */
   displayAngle = 0
   private fireAccumulator = 0
+  /** Number of fire volleys emitted this frame (for SFX). */
+  shotsFiredThisFrame = 0
 
   constructor(x: number, y: number) {
     this.position.x = x
@@ -92,11 +94,13 @@ export class Player {
     this.invulnTimer = Math.max(0, this.invulnTimer - dt)
 
     const shots: Projectile[] = []
+    this.shotsFiredThisFrame = 0
     if (input.isPointerDown()) {
       const shotsPerSecond = 1000 / this.weapon.fireRate
       this.fireAccumulator += dt * shotsPerSecond
       while (this.fireAccumulator >= 1) {
         shots.push(...this.fire())
+        this.shotsFiredThisFrame++
         this.fireAccumulator -= 1
       }
     } else {

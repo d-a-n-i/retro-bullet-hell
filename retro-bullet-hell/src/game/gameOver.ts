@@ -53,6 +53,8 @@ export function drawGameOverScreen(
   score: number,
   time: number,
   level = 1,
+  canRestart = true,
+  isTouchDevice = false,
 ): void {
   const pulse = 0.7 + Math.sin(time * 4) * 0.3
 
@@ -86,11 +88,16 @@ export function drawGameOverScreen(
   ctx.font = '15px system-ui, sans-serif'
   ctx.fillText(`Reached level ${level}`, cx, cy + 36)
 
-  ctx.globalAlpha = pulse
-  ctx.fillStyle = '#a5f3fc'
-  ctx.font = '18px system-ui, sans-serif'
-  ctx.fillText('Click or press Space to play again', cx, cy + 64)
-  ctx.globalAlpha = 1
+  if (canRestart) {
+    ctx.globalAlpha = pulse
+    ctx.fillStyle = '#a5f3fc'
+    ctx.font = '18px system-ui, sans-serif'
+    const restartLabel = isTouchDevice
+      ? 'Tap to play again'
+      : 'Click or press Space to play again'
+    ctx.fillText(restartLabel, cx, cy + 72)
+    ctx.globalAlpha = 1
+  }
 
   ctx.restore()
 }

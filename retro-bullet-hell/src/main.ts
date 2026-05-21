@@ -40,6 +40,7 @@ import {
   type DeathFx,
   type GamePhase,
 } from './game/gameOver'
+import { SoundManager } from './audio/SoundManager'
 import { Input } from './input/Input'
 
 function showBootError(error: unknown): void {
@@ -60,8 +61,17 @@ function boot(): void {
   const scoreEl = document.querySelector<HTMLDivElement>('#score')
   const healthEl = document.querySelector<HTMLDivElement>('#health')
   const levelEl = document.querySelector<HTMLDivElement>('#level')
+  const controlsHintEl = document.querySelector<HTMLDivElement>('#controls-hint')
+
+  const isTouchDevice =
+    'ontouchstart' in window ||
+    (typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0)
+  if (controlsHintEl) {
+    controlsHintEl.dataset.platform = isTouchDevice ? 'mobile' : 'desktop'
+  }
 
   const input = new Input(canvas)
+  const audio = new SoundManager()
   const projectiles: Projectile[] = []
   const enemies: Enemy[] = []
   const debris: DebrisParticle[] = []
@@ -80,6 +90,39 @@ function boot(): void {
   let shakeY = 0
 
   const DEATH_SEQUENCE_DURATION = 0.55
+  /** Minimum time on the game-over screen before restart input is accepted. */
+  const GAME_OVER_INPUT_DELAY = 1.6
+
+  let controlsHintVisible = true
+
+  function hideControlsHint(): void {
+    if (!controlsHintVisible || !controlsHintEl) return
+    controlsHintVisible = false
+    controlsHintEl.classList.add('is-hidden')
+  }
+
+  function unlockAudio(): void {
+    void audio.unlock()
+  }
+
+  function playShootSounds(): void {
+    for (let i = 0; i < player.shotsFiredThisFrame; i++) {
+      audio.playShoot()
+    }
+  }
+
+  function playCollisionSounds(collision: ReturnType<typeof resolveCollisions>): void {
+    const chipHits = collision.enemyHits - collision.enemyKills
+    for (let i = 0; i < collision.enemyKills; i++) {
+      audio.playEnemyHit(true)
+    }
+    for (let i = 0; i < Math.min(chipHits, 4); i++) {
+      audio.playEnemyHit(false)
+    }
+    for (let i = 0; i < collision.playerHits; i++) {
+      audio.playPlayerHit()
+    }
+  }
 
   function resetGame(): void {
     player = new Player(window.innerWidth / 2, window.innerHeight / 2)
@@ -186,6 +229,7 @@ function boot(): void {
 
   function tryRestart(): void {
     if (phase !== 'gameOver') return
+    if (gameOverTime < GAME_OVER_INPUT_DELAY) return
     resetGame()
   }
 
@@ -216,10 +260,41 @@ function boot(): void {
     canvas.style.height = `${viewportHeight}px`
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    input.setViewport(viewportWidth, viewportHeight)
 
     if (phase === 'playing') {
       player.constrainToBounds(getBounds())
     }
+  }
+
+  function drawJoystick(): void {
+    const joystick = input.getJoystickState()
+    if (!joystick.active) return
+
+    ctx.save()
+    ctx.lineWidth = 2
+    ctx.strokeStyle = 'rgba(103, 232, 249, 0.55)'
+    ctx.fillStyle = 'rgba(34, 211, 238, 0.08)'
+
+    ctx.beginPath()
+    ctx.arc(joystick.originX, joystick.originY, joystick.maxRadius, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.stroke()
+
+    const dx = joystick.currentX - joystick.originX
+    const dy = joystick.currentY - joystick.originY
+    const mag = Math.hypot(dx, dy)
+    const clampedMag = Math.min(mag, joystick.maxRadius)
+    const tx = mag === 0 ? joystick.originX : joystick.originX + (dx / mag) * clampedMag
+    const ty = mag === 0 ? joystick.originY : joystick.originY + (dy / mag) * clampedMag
+
+    ctx.fillStyle = 'rgba(103, 232, 249, 0.75)'
+    ctx.shadowColor = '#22d3ee'
+    ctx.shadowBlur = 18
+    ctx.beginPath()
+    ctx.arc(tx, ty, 22, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.restore()
   }
 
   function updatePlaying(dt: number): void {
@@ -232,6 +307,7 @@ function boot(): void {
 
     const spawned = player.update(dt, input, bounds)
     if (spawned.length > 0) projectiles.push(...spawned)
+    if (player.shotsFiredThisFrame > 0) playShootSounds()
 
     if (!frozen) {
       gameTime += dt
@@ -258,6 +334,7 @@ function boot(): void {
     addScore(collision.scoreDelta)
     if (collision.newEnemies.length > 0) enemies.push(...collision.newEnemies)
     if (collision.newDebris.length > 0) debris.push(...collision.newDebris)
+    playCollisionSounds(collision)
 
     if (collision.playerKilled) {
       beginDeathSequence()
@@ -349,8 +426,12 @@ function boot(): void {
         score,
         gameOverTime,
         currentLevel,
+        gameOverTime >= GAME_OVER_INPUT_DELAY,
+        isTouchDevice,
       )
     }
+
+    drawJoystick()
   }
 
   function tick(timestamp: number): void {
@@ -395,11 +476,20 @@ function boot(): void {
     cancelAnimationFrame(animationId)
   }
 
-  canvas.addEventListener('click', () => {
+  input.onAnyInput = () => {
+    unlockAudio()
+    hideControlsHint()
+  }
+
+  canvas.addEventListener('pointerdown', () => {
+    unlockAudio()
+    hideControlsHint()
     if (phase === 'gameOver') tryRestart()
   })
 
   window.addEventListener('keydown', (event) => {
+    unlockAudio()
+    hideControlsHint()
     if (event.code === 'Space' || event.code === 'Enter') {
       if (phase === 'gameOver') {
         event.preventDefault()

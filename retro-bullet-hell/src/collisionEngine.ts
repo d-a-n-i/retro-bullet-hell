@@ -13,6 +13,9 @@ export interface CollisionResult {
   newEnemies: Enemy[]
   newDebris: DebrisParticle[]
   playerKilled: boolean
+  enemyHits: number
+  enemyKills: number
+  playerHits: number
 }
 
 export function resolveCollisions(
@@ -25,6 +28,9 @@ export function resolveCollisions(
   const newEnemies: Enemy[] = []
   const newDebris: DebrisParticle[] = []
   let playerKilled = false
+  let enemyHits = 0
+  let enemyKills = 0
+  let playerHits = 0
 
   for (const projectile of projectiles) {
     if (!projectile.active) continue
@@ -50,8 +56,11 @@ export function resolveCollisions(
       }
 
       projectile.active = false
+      enemyHits++
 
-      if (enemy.takeDamage(PROJECTILE_DAMAGE)) {
+      const killed = enemy.takeDamage(PROJECTILE_DAMAGE)
+      if (killed) {
+        enemyKills++
         const death = handleEnemyDeath(enemy, scoreMultiplier)
         scoreDelta += death.scoreDelta
         newDebris.push(...death.debris)
@@ -85,12 +94,16 @@ export function resolveCollisions(
 
       const contactDamage = getContactDamageForEnemy(enemy.radius)
       const wasAlive = player.isAlive
+      const healthBefore = player.health
       player.takeDamage(contactDamage)
+      if (player.health < healthBefore) playerHits++
 
       const death = handleEnemyDeath(enemy, scoreMultiplier)
       scoreDelta += death.scoreDelta
       newDebris.push(...death.debris)
       newEnemies.push(...death.newEnemies)
+      enemyHits++
+      enemyKills++
 
       if (wasAlive && !player.isAlive) {
         playerKilled = true
@@ -98,5 +111,13 @@ export function resolveCollisions(
     }
   }
 
-  return { scoreDelta, newEnemies, newDebris, playerKilled }
+  return {
+    scoreDelta,
+    newEnemies,
+    newDebris,
+    playerKilled,
+    enemyHits,
+    enemyKills,
+    playerHits,
+  }
 }
