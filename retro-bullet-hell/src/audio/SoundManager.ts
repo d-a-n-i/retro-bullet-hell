@@ -16,6 +16,28 @@ export class SoundManager {
   private master: GainNode | null = null
   private unlocked = false
   private lastShootAt = 0
+  private muted = SoundManager.readMuted()
+
+  private static readMuted(): boolean {
+    try {
+      return window.localStorage.getItem('zbace.muted') === '1'
+    } catch {
+      return false
+    }
+  }
+
+  get isMuted(): boolean {
+    return this.muted
+  }
+
+  setMuted(value: boolean): void {
+    this.muted = value
+    try {
+      window.localStorage.setItem('zbace.muted', value ? '1' : '0')
+    } catch {
+      // storage unavailable, mute still applies for this session
+    }
+  }
 
   async unlock(): Promise<void> {
     if (this.unlocked) return
@@ -112,7 +134,7 @@ export class SoundManager {
   }
 
   private canPlay(): boolean {
-    return this.ctx !== null && this.master !== null && this.unlocked
+    return !this.muted && this.ctx !== null && this.master !== null && this.unlocked
   }
 
   private playTone(options: ToneOptions): void {

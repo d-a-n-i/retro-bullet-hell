@@ -1,5 +1,5 @@
 {
-  "name": "retro-bullet-hell",
+  "name": "zbace",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -12,10 +12,9 @@
   },
   "devDependencies": {
     "typescript": "~6.0.2",
-    "vite": "^8.0.12"
+    "vite": "^8.0.12",
+    "gh-pages": "^6.3.0"
   },
-  "dependencies": {
-    "gh-pages": "^6.3.0",
-    "save-dev": "^0.0.1-security"
-  }
+  "license": "MIT",
+  "description": "A retro browser space shooter. Pure pixels, lasers, and high scores."
 }

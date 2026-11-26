@@ -93,7 +93,7 @@ body {
 
 #fps {
   position: absolute;
-  top: max(0.75rem, env(safe-area-inset-top));
+  top: calc(max(0.75rem, env(safe-area-inset-top)) + 3rem);
   right: max(0.75rem, env(safe-area-inset-right));
   font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
   font-size: 0.75rem;
@@ -381,4 +381,38 @@ body {
   #stats {
     font-size: 0.68rem;
   }
+}
+
+/* ----- Pause, mute, best score ----- */
+
+#controls-bar {
+  position: absolute;
+  top: max(0.75rem, env(safe-area-inset-top));
+  right: max(0.75rem, env(safe-area-inset-right));
+  z-index: 30;
+  display: flex;
+  gap: 0.4rem;
+}
+
+#controls-bar button {
+  font: 0.7rem ui-monospace, 'Cascadia Code', Consolas, monospace;
+  min-width: 2.4rem;
+  min-height: 2.4rem;
+  color: #9ca3af;
+  background: rgba(10, 10, 15, 0.75);
+  border: 1px solid #1f2937;
+  border-radius: 0.25rem;
+  cursor: pointer;
+}
+
+#controls-bar button.is-off {
+  color: #6b7280;
+  text-decoration: line-through;
+}
+
+.controls-hint__best {
+  margin-top: 0.75rem;
+  text-align: center;
+  color: #fde047;
+  font-size: 0.9rem;
 }
