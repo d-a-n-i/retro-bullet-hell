@@ -63,12 +63,49 @@ function boot(): void {
   const levelEl = document.querySelector<HTMLDivElement>('#level')
   const controlsHintEl = document.querySelector<HTMLDivElement>('#controls-hint')
 
-  const isTouchDevice =
-    'ontouchstart' in window ||
-    (typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0)
-  if (controlsHintEl) {
-    controlsHintEl.dataset.platform = isTouchDevice ? 'mobile' : 'desktop'
+  const bestLineEl = document.querySelector<HTMLDivElement>('#best-line')
+  const pauseBtn = document.querySelector<HTMLButtonElement>('#pause-btn')
+  const muteBtn = document.querySelector<HTMLButtonElement>('#mute-btn')
+
+  if (fpsEl && new URLSearchParams(window.location.search).get('debug') !== '1') {
+    fpsEl.hidden = true
   }
+
+  // The hint starts from the primary pointer and follows the first real input.
+  // A touchscreen laptop with a mouse no longer gets phone instructions.
+  let isTouchDevice = window.matchMedia('(pointer: coarse)').matches
+  function setPlatform(touch: boolean): void {
+    isTouchDevice = touch
+    if (controlsHintEl) {
+      controlsHintEl.dataset.platform = touch ? 'mobile' : 'desktop'
+    }
+  }
+  setPlatform(isTouchDevice)
+
+  const BEST_KEY = 'zbace.best'
+  function loadBest(): number {
+    try {
+      const value = Number(window.localStorage.getItem(BEST_KEY))
+      return Number.isFinite(value) && value > 0 ? Math.floor(value) : 0
+    } catch {
+      return 0
+    }
+  }
+  function saveBest(value: number): void {
+    try {
+      window.localStorage.setItem(BEST_KEY, String(value))
+    } catch {
+      // storage unavailable, best score lasts for this session only
+    }
+  }
+  let bestScore = loadBest()
+  let newBest = false
+  function showBestLine(): void {
+    if (!bestLineEl) return
+    bestLineEl.hidden = bestScore <= 0
+    bestLineEl.textContent = `Best ${bestScore}`
+  }
+  showBestLine()
 
   const input = new Input(canvas)
   const audio = new SoundManager()
@@ -94,6 +131,9 @@ function boot(): void {
   const GAME_OVER_INPUT_DELAY = 1.6
 
   let controlsHintVisible = true
+  // Nothing spawns or deals damage until the first key, click or touch.
+  let started = false
+  let paused = false
 
   function hideControlsHint(): void {
     if (!controlsHintVisible || !controlsHintEl) return
@@ -129,6 +169,7 @@ function boot(): void {
     projectiles.length = 0
     enemies.length = 0
     debris.length = 0
+    newBest = false
     score = 0
     currentLevel = 1
     gameTime = 0
@@ -217,6 +258,11 @@ function boot(): void {
   }
 
   function beginDeathSequence(): void {
+    if (score > bestScore) {
+      bestScore = score
+      newBest = true
+      saveBest(bestScore)
+    }
     phase = 'deathSequence'
     deathSequenceTimer = 0
     gameOverTime = 0
@@ -265,6 +311,25 @@ function boot(): void {
     if (phase === 'playing') {
       player.constrainToBounds(getBounds())
     }
+  }
+
+  function drawPaused(): void {
+    ctx.save()
+    ctx.fillStyle = 'rgba(5, 5, 12, 0.7)'
+    ctx.fillRect(0, 0, viewportWidth, viewportHeight)
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillStyle = '#67e8f9'
+    ctx.font = 'bold 42px system-ui, sans-serif'
+    ctx.fillText('PAUSED', viewportWidth / 2, viewportHeight / 2 - 12)
+    ctx.fillStyle = '#9ca3af'
+    ctx.font = '16px system-ui, sans-serif'
+    ctx.fillText(
+      isTouchDevice ? 'Tap to resume' : 'Press Esc or P, or click, to resume',
+      viewportWidth / 2,
+      viewportHeight / 2 + 28,
+    )
+    ctx.restore()
   }
 
   function drawJoystick(): void {
@@ -361,6 +426,7 @@ function boot(): void {
   }
 
   function update(dt: number): void {
+    if (!started || paused) return
     if (phase === 'playing') {
       updatePlaying(dt)
       return
@@ -428,8 +494,12 @@ function boot(): void {
         currentLevel,
         gameOverTime >= GAME_OVER_INPUT_DELAY,
         isTouchDevice,
+        bestScore,
+        newBest,
       )
     }
+
+    if (paused) drawPaused()
 
     drawJoystick()
   }
@@ -476,20 +546,68 @@ function boot(): void {
     cancelAnimationFrame(animationId)
   }
 
-  input.onAnyInput = () => {
-    unlockAudio()
+  function startGame(): void {
+    if (started) return
+    started = true
     hideControlsHint()
   }
 
+  function setPaused(value: boolean): void {
+    if (paused === value) return
+    paused = value
+    if (!value) lastTimestamp = 0
+    render()
+  }
+
+  function refreshMuteButton(): void {
+    muteBtn?.classList.toggle('is-off', audio.isMuted)
+    muteBtn?.setAttribute('aria-pressed', String(audio.isMuted))
+  }
+  refreshMuteButton()
+
+  function toggleMute(): void {
+    audio.setMuted(!audio.isMuted)
+    refreshMuteButton()
+  }
+
+  pauseBtn?.addEventListener('click', () => {
+    if (started && phase === 'playing') setPaused(!paused)
+  })
+  muteBtn?.addEventListener('click', toggleMute)
+
+  window.addEventListener('pointerdown', (event) => {
+    if (!started) setPlatform(event.pointerType === 'touch')
+  })
+  window.addEventListener('pointermove', (event) => {
+    if (!started) setPlatform(event.pointerType === 'touch')
+  })
+
   canvas.addEventListener('pointerdown', () => {
     unlockAudio()
-    hideControlsHint()
+    if (paused) {
+      setPaused(false)
+      return
+    }
+    startGame()
     if (phase === 'gameOver') tryRestart()
   })
 
   window.addEventListener('keydown', (event) => {
+    if (event.repeat) return
+    if (event.code === 'KeyM') {
+      toggleMute()
+      return
+    }
+    if (event.code === 'Escape' || event.code === 'KeyP') {
+      if (started && phase === 'playing') setPaused(!paused)
+      return
+    }
     unlockAudio()
-    hideControlsHint()
+    if (paused) {
+      setPaused(false)
+      return
+    }
+    startGame()
     if (event.code === 'Space' || event.code === 'Enter') {
       if (phase === 'gameOver') {
         event.preventDefault()
@@ -498,12 +616,17 @@ function boot(): void {
     }
   })
 
+  window.addEventListener('blur', () => {
+    if (started && phase === 'playing') setPaused(true)
+  })
+
   resize()
   render()
   updateHud(0, 0)
   window.addEventListener('resize', resize)
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
+      if (started && phase === 'playing') setPaused(true)
       stop()
     } else {
       start()
